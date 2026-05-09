@@ -23,7 +23,19 @@ const rdud =
   getQueryParam("id") ||
   "UNKNOWN";
 
+// ✅ ADD THIS RIGHT HERE
+if (!rdud || rdud === "UNKNOWN") {
+  console.error("❌ Invalid RDUD");
 
+  document.body.innerHTML = `
+    <div style="text-align:center; padding:40px;">
+      <h2>Invalid Session</h2>
+      <p>Please access the survey through the panel.</p>
+    </div>
+  `;
+
+  throw new Error("Missing rdud");
+}
 
 const jsPsych = initJsPsych({
   show_progress_bar: true
@@ -2129,29 +2141,34 @@ timeline.push({
  
 
 
+o
 on_finish: async function () {
 
   if (hasRedirected) return;
   hasRedirected = true;
 
-  const fullQuery = window.location.search || `?rdud=${rdud}`;
-  const FINAL_URL = `https://www.rdsecured.com/return${fullQuery}&inbound_code=1000`;
+  // ✅ STRICT Research Desk format (DO NOT CHANGE ORDER)
+  const FINAL_URL = `https://www.rdsecured.com/return?inbound_code=1000&rdud=${encodeURIComponent(rdud)}`;
 
+  // ✅ Optional: data cleaning (keep yours if needed)
   const allData = jsPsych.data.get().values()
     .filter(d => 
       d.trial_type !== "preload" &&
       d.trial_category !== "mobile_breaker" &&
       d.trial_type !== "mobile_breaker" &&
       d.part !== "Breaker" &&
-      d.stimulus?.toString().trim() !== "" &&
       !d.is_feedback
     );
 
+  console.log("✅ Cleaned trials:", allData.length);
+  console.log("✅ RDUD sent:", rdud);
+
   let redirected = false;
 
-  // ✅ fallback
+  // ✅ fallback redirect (guarantees exit)
   setTimeout(() => {
     if (!redirected) {
+      console.warn("⚠️ Fallback redirect triggered");
       window.location.href = FINAL_URL;
     }
   }, 2000);
@@ -2161,11 +2178,17 @@ on_finish: async function () {
       .ref(`miat_results/${survey_name}`)
       .push(allData);
 
+    console.log("✅ Firebase success:", snapshot.key);
+
     redirected = true;
 
+    // ✅ SUCCESS redirect (complete)
     window.location.href = FINAL_URL;
 
   } catch (e) {
+    console.error("❌ Firebase failed:", e);
+
+    // ✅ STILL COMPLETE (do NOT change this)
     window.location.href = FINAL_URL;
   }
 }
