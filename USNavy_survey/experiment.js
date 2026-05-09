@@ -2128,10 +2128,14 @@ timeline.push({
   trial_duration: 1000,
  
 
+
 on_finish: async function () {
 
   if (hasRedirected) return;
   hasRedirected = true;
+
+  const fullQuery = window.location.search || `?rdud=${rdud}`;
+  const FINAL_URL = `https://www.rdsecured.com/return${fullQuery}&inbound_code=1000`;
 
   const allData = jsPsych.data.get().values()
     .filter(d => 
@@ -2141,21 +2145,14 @@ on_finish: async function () {
       d.part !== "Breaker" &&
       d.stimulus?.toString().trim() !== "" &&
       !d.is_feedback
-    )
-    .map(d => ({
-      ...d,
-      mobile: respondentIsMobile
-    }));
-
-  console.log("✅ Cleaned trials:", allData.length);
+    );
 
   let redirected = false;
 
-  // ✅ ✅ CRITICAL: fallback redirect (guaranteed exit)
+  // ✅ fallback
   setTimeout(() => {
     if (!redirected) {
-      console.warn("⚠️ Fallback redirect triggered");
-      window.location.href = `https://www.rdsecured.com/return?inbound_code=1000&rdud=${encodeURIComponent(rdud)}`;
+      window.location.href = FINAL_URL;
     }
   }, 2000);
 
@@ -2164,16 +2161,12 @@ on_finish: async function () {
       .ref(`miat_results/${survey_name}`)
       .push(allData);
 
-    console.log("✅ Firebase success:", snapshot.key);
-
     redirected = true;
 
-    window.location.href = `https://www.rdsecured.com/return?inbound_code=1000&rdud=${encodeURIComponent(rdud)}`;
+    window.location.href = FINAL_URL;
 
   } catch (e) {
-    console.error("❌ Firebase failed:", e);
-
-    window.location.href = `https://www.rdsecured.com/return?inbound_code=1000&rdud=${encodeURIComponent(rdud)}`;
+    window.location.href = FINAL_URL;
   }
 }
 });
