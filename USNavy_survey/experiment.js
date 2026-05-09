@@ -1,3 +1,4 @@
+let hasRedirected = false;
 function isMobileDevice() {
   return /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent);
 }
@@ -23,12 +24,9 @@ const rdud =
   "UNKNOWN";
 
 
-const jsPsych = initJsPsych({  show_progress_bar: true,
-  on_finish: async function () {
-    if (hasRedirected) return; hasRedirected = true;
-    const allData = jsPsych.data.get().values();
-    await saveAndRedirect(1000, allData);
-  }
+
+const jsPsych = initJsPsych({
+  show_progress_bar: true
 });
 //   {
 //   on_finish: function () {
@@ -670,7 +668,11 @@ function generateFlatMultiBrandTrials(trialVars, respondentId, partLabel, isPret
       on_finish: function(data) {
         let selectedImage;
         if (respondentIsMobile) {
-          selectedImage = data.image_names[data.response];
+        if (data.response !== null && data.response < data.image_names.length) {
+        selectedImage = data.image_names[data.response];
+        } else {
+        selectedImage = null;
+        }
         } else {
           const keyToIndex = { 'a': 0, 's': 1, 'k': 2, 'l': 3 };
           const idx = keyToIndex[data.response];
@@ -1491,7 +1493,6 @@ const preload = {
    'pretest_img/pretest_icecube.png',
    'pretest_img/pretest_ocean.png',
    'pretest_img/pretest_clock.png',
-   'img/FCBNY_Logo.png',
    'img/Air Force.png',
    'img/Army.png',
    'img/Coast Guard.png',
@@ -1531,13 +1532,7 @@ timeline.push({
       align-items: center;
       text-align: center;
       padding: 5vw;
-    "> 
-      <img src="img/FCBNY_Logo.png" style="
-        width: 100vw;
-        max-width: 700px;
-        height: auto;
-        margin-bottom: 4vh;
-      "/>
+      
       <p1 style="font-size: clamp(1.6rem, 4.0vw, 2rem); font-weight: 600; margin-bottom: 2vh;">
         Welcome to our Implicit Association Survey!
       </p>
@@ -2043,7 +2038,11 @@ timeline: multi_pretest_intro});
 //------------------------------------------------------------------------------------------------------
 const multi_pretest_flat = generateFlatMultiBrandTrials(pretest_trials_multiple, respondent_id, "pretest_multiple_implicit", true);
 console.log(multi_pretest_flat);
-const multipretestBlock = wrapPretestBlock(multi_pretest_flat, 7, "pretest_single_implicit");
+const multipretestBlock = wrapPretestBlock(
+  multi_pretest_flat, 
+  7, 
+  "pretest_multiple_implicit"
+);
 timeline.push(multipretestBlock);
 
 
@@ -2127,41 +2126,56 @@ timeline.push({
   `,
   choices: "NO_KEYS",
   trial_duration: 1000,
-  on_finish: async function () {
-    const allData = jsPsych.data.get().values()
-  .filter(d => 
-    d.trial_type !== "preload" &&            // 🚫 drop preload/meta
-    d.trial_category !== "mobile_breaker" && // 🚫 drop breakers
-    d.trial_type !== "mobile_breaker" &&     // 🚫 catch if it’s stored in trial_type
-    d.part !== "Breaker" &&                  // 🚫 drop "Breaker" part
-    d.stimulus?.toString().trim() !== "" &&  // 🚫 drop blanks
-    !d.is_feedback                           // 🚫 drop feedback
-  )
-  .map(d => ({
-    ...d,
-    mobile: respondentIsMobile   // ✅ add your mobile flag
-  }));
+ 
 
-console.log("✅ Final filtered length:", allData.length);
+on_finish: async function () {
 
-console.log(allData[1]);
-console.log("✅ Cleaned trials count:", allData.length);
+  if (hasRedirected) return;
+  hasRedirected = true;
 
+  const allData = jsPsych.data.get().values()
+    .filter(d => 
+      d.trial_type !== "preload" &&
+      d.trial_category !== "mobile_breaker" &&
+      d.trial_type !== "mobile_breaker" &&
+      d.part !== "Breaker" &&
+      d.stimulus?.toString().trim() !== "" &&
+      !d.is_feedback
+    )
+    .map(d => ({
+      ...d,
+      mobile: respondentIsMobile
+    }));
 
-    try {
-      const snapshot = await database
-        .ref(`miat_results/${survey_name}`)
-        .push(allData);
+  console.log("✅ Cleaned trials:", allData.length);
 
-      console.log("✅ Firebase write successful. Key:", snapshot.key);
+  let redirected = false;
 
+  // ✅ ✅ CRITICAL: fallback redirect (guaranteed exit)
+  setTimeout(() => {
+    if (!redirected) {
+      console.warn("⚠️ Fallback redirect triggered");
       window.location.href = `https://www.rdsecured.com/return?inbound_code=1000&rdud=${encodeURIComponent(rdud)}`;
-    } catch (e) {
-        console.error("❌ Firebase write failed:", e);
-
-        window.location.href = `https://www.rdsecured.com/return?inbound_code=1000&rdud=${encodeURIComponent(rdud)}`;
     }
+  }, 2000);
+
+  try {
+    const snapshot = await database
+      .ref(`miat_results/${survey_name}`)
+      .push(allData);
+
+    console.log("✅ Firebase success:", snapshot.key);
+
+    redirected = true;
+
+    window.location.href = `https://www.rdsecured.com/return?inbound_code=1000&rdud=${encodeURIComponent(rdud)}`;
+
+  } catch (e) {
+    console.error("❌ Firebase failed:", e);
+
+    window.location.href = `https://www.rdsecured.com/return?inbound_code=1000&rdud=${encodeURIComponent(rdud)}`;
   }
+}
 });
 
 console.log(timeline)
