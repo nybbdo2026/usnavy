@@ -23,20 +23,6 @@ const rdud =
   getQueryParam("id") ||
   "UNKNOWN";
 
-// ✅ ADD THIS RIGHT HERE
-if (!rdud || rdud === "UNKNOWN") {
-  console.error("❌ Invalid RDUD");
-
-  document.body.innerHTML = `
-    <div style="text-align:center; padding:40px;">
-      <h2>Invalid Session</h2>
-      <p>Please access the survey through the panel.</p>
-    </div>
-  `;
-
-  throw new Error("Missing rdud");
-}
-
 const jsPsych = initJsPsych({
   show_progress_bar: true
 });
@@ -2124,74 +2110,47 @@ timeline.push(...multiple_brand_trials_with_check);
 timeline.push({
   type: jsPsychHtmlKeyboardResponse,
   stimulus: `
-    <div style="
-      text-align: center;
-      font-size: clamp(2rem, 5vw, 4rem);
-      font-weight: 600;
-      color: #111;
-      padding: 5vh 5vw;
-    ">
+    <div style="text-align: center; font-size: 2rem;">
       <p>🎉 Thank you for participating!</p>
-      <p> Please keep this window open </p>
-      <p> until you are redirected.</p>
+      <p>Please keep this window open until redirect.</p>
     </div>
   `,
   choices: "NO_KEYS",
   trial_duration: 1000,
- 
 
+  on_finish: async function () {
 
-o
-on_finish: async function () {
+    if (hasRedirected) return;
+    hasRedirected = true;
 
-  if (hasRedirected) return;
-  hasRedirected = true;
+      const FINAL_URL = `https://www.rdsecured.com/return?inbound_code=1000&rdud=${encodeURIComponent(rdud)}`
+       const allData = jsPsych.data.get().values()
+       .filter(d =>
+        d.trial_type !== "preload" &&
+        d.trial_category !== "mobile_breaker" &&
+        d.trial_type !== "mobile_breaker" &&
+        d.part !== "Breaker" &&
+        !d.is_feedback
+      );
 
-  // ✅ STRICT Research Desk format (DO NOT CHANGE ORDER)
-  const FINAL_URL = `https://www.rdsecured.com/return?inbound_code=1000&rdud=${encodeURIComponent(rdud)}`;
+    let redirected = false;
 
-  // ✅ Optional: data cleaning (keep yours if needed)
-  const allData = jsPsych.data.get().values()
-    .filter(d => 
-      d.trial_type !== "preload" &&
-      d.trial_category !== "mobile_breaker" &&
-      d.trial_type !== "mobile_breaker" &&
-      d.part !== "Breaker" &&
-      !d.is_feedback
-    );
+    setTimeout(() => {
+      if (!redirected) {
+        window.location.href = FINAL_URL;
+      }
+    }, 2000);
 
-  console.log("✅ Cleaned trials:", allData.length);
-  console.log("✅ RDUD sent:", rdud);
+    try {
+      await database.ref(`miat_results/${survey_name}`).push(allData);
 
-  let redirected = false;
+      redirected = true;
+      window.location.href = FINAL_URL;
 
-  // ✅ fallback redirect (guarantees exit)
-  setTimeout(() => {
-    if (!redirected) {
-      console.warn("⚠️ Fallback redirect triggered");
+    } catch (e) {
       window.location.href = FINAL_URL;
     }
-  }, 2000);
-
-  try {
-    const snapshot = await database
-      .ref(`miat_results/${survey_name}`)
-      .push(allData);
-
-    console.log("✅ Firebase success:", snapshot.key);
-
-    redirected = true;
-
-    // ✅ SUCCESS redirect (complete)
-    window.location.href = FINAL_URL;
-
-  } catch (e) {
-    console.error("❌ Firebase failed:", e);
-
-    // ✅ STILL COMPLETE (do NOT change this)
-    window.location.href = FINAL_URL;
   }
-}
 });
 
 console.log(timeline)
