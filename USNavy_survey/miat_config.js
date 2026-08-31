@@ -9,7 +9,7 @@ const brands = [
 
 const category = "Armed Forces"
 
-const attributes = ["adventure","freedom","courage","daring","discovery","fighting spirit","risk","resilience","pride","perfection","recognition","success","achievement","self-confidence","improve myself","leadership","determination","discipline","control","reason","efficiency","reliability","expertise","order","precision","safety","security","caring","closeness","comradeship","protection","feel at home","belonging","joy","treat","allure","exhilaration","appreciation","optimism","authenticity","satisfaction","excitement","zest for life","inspiration","vitality","drive","individuality","exploration","innovation"];
+const attributes = ["freedom","courage","daring","discovery","fighting spirit","risk","resilience","pride","perfection","recognition","success","achievement","self-confidence","improve myself","leadership","determination","discipline","control","reason","efficiency","reliability","expertise","order","precision","safety","security","caring","closeness","comradeship","protection","feel at home","belonging","joy","treat","allure","exhilaration","appreciation","optimism","authenticity","satisfaction","excitement","zest for life","inspiration","vitality","drive","individuality","exploration","innovation"];
 
 const pretest_attributes = [
   "Hot", 

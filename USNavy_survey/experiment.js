@@ -19,7 +19,7 @@ function getQueryParam(param) {
 
 const rdud =
   getQueryParam("rdud") ||
-  getQueryParam("rid") ||
+  getQueryParam("rid") || 
   getQueryParam("id") ||
   "UNKNOWN";
 
